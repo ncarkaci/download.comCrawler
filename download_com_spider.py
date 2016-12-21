@@ -38,11 +38,14 @@ def run(search_keyword, agentHeader, proxy):
 
 	for pageNo in range(1,pageSize):
 		page_url = main_url+"?page="+str(pageNo)
-		downloadFilesInPage(page_url, agentHeader, proxy)
+		
+		if not os.path.exists(search_keyword):
+			os.makedirs(search_keyword)
+		downloadFilesInPage(page_url, search_keyword, agentHeader, proxy)
 
 
 # Getting redirect links from page
-def downloadFilesInPage(url, agentHeader, proxy):
+def downloadFilesInPage(url, category, agentHeader, proxy):
 
 	try:
 		print ("Search page : "+url)
@@ -57,34 +60,36 @@ def downloadFilesInPage(url, agentHeader, proxy):
 			urlQueue.put(link)
 				
 		for thread in range(10):
-			thread = Thread(target = downloadThread, args = (urlQueue,))
+			thread = Thread(target = downloadThread, args = (urlQueue,category,))
 			thread.daemon = True
 			thread.start()
 			
 		urlQueue.join()
 
 	except Exception as err:
-		with open('log.txt', "a+") as logfile:				
-			print ("Hata : "+ str(err))
-			logfile.write("Search result url : "+url+"\n"+"Hata : "+ str(err))
+		writeError(url,"Error, while collecting redirect links :"+str(err))
 
-def downloadThread(urlQueue):
+def downloadThread(urlQueue, category):
 	
-	while not urlQueue.empty():
-		link = urlQueue.get()
-		# New user agent for per download link
-		user_agent  = UserAgent()
-		agentHeader = {'User-Agent': user_agent.random}
+	try:
+		while not urlQueue.empty():
+			link = urlQueue.get()
+			# New user agent for per download link
+			user_agent  = UserAgent()
+			agentHeader = {'User-Agent': user_agent.random}
 
-		if link.endswith('.html') and (not isDuplicateLink(link.replace("\n", ""))):
-			print ("Redirect url link : "+link)
-			download_link = getDownloadLink(link,  agentHeader, proxy)
+			if link.endswith('.html') and (not isDuplicateLink(link.replace("\n", ""))):
+				#print ("Redirect url link : "+link)
+				download_link = getDownloadLink(link,  agentHeader, proxy)
 				
-			if download_link != '':
-				download_link = download_link.replace("\n", "")
-				print ("Download url link : "+download_link)	
-				downloadFile(download_link,  agentHeader, proxy)
-		urlQueue.task_done()
+				if download_link != '':
+					download_link = download_link.replace("\n", "")
+					#print ("Download url link : "+download_link)	
+					downloadFile(download_link, category, agentHeader, proxy)
+			urlQueue.task_done()
+
+	except Exception as err:
+		writeError(link,"Error while thread downloading :"+str(err))			
 		
 # Get download link from redirect link
 def getDownloadLink(url,  agentHeader, proxy):
@@ -104,51 +109,57 @@ def getDownloadLink(url,  agentHeader, proxy):
 				if 'http://files.downloadnow.com' in download_link:
 					return download_link
 				else :
+					writeError(download_link,"Uninted url :")		
+
 					print ("Uninted url : "+download_link)
 					return ''
 		else: 
+			writeError(url,"No download link :")
 			print ("Download Link bulunamadı : "+url)
+			return ''
 
 	except Exception as err:
-		with open('log.txt', "a+") as logfile:			
-			print ("Hata : "+ str(err))
-			print (download_link)	
-			logfile.write("Download link : "+download_link+"\n"+"Hata : "+ str(err))
+		writeError(download_link,"Error, while getting donwnload link :"+str(err))		
 
 # Download files
-def downloadFile(url,  agentHeader, proxy):
+def downloadFile(url, category, agentHeader, proxy):
 
-	local_filename  = url.split('=')[-1]
-	if os.path.isfile(local_filename):
-		suffix = "_"+str(random.randrange(0, 100000000))
-		filename, file_extension = os.path.splitext(local_filename)
-		local_filename = filename+suffix+file_extension 
-	print ("File name : "+local_filename)
+	try :
 
-	session 	= requests.session()
-	size 		= requests.head(url).headers['Content-Length']
-	print ("File size : "+size)	
+		local_filename  = url.split('=')[-1]
+		if not os.path.isfile(category+os.sep+local_filename):
+			#print ("File name : "+local_filename)
 
-	length_limit	= 52428800 # 52428800 Byte = 50 Megabyte warn! make this dynamic parameter
+			session 	= requests.session()
+			size 		= requests.head(url).headers['Content-Length']
+			#print ("File size : "+size)	
 
-	if (int(size) < length_limit):
-		response 	= session.get(url, headers=agentHeader, proxies=proxy)	
+			length_limit	= 10485760 # 10485760 Byte = 10 Megabyte warn! make this dynamic parameter
+
+			if (int(size) < length_limit):
+				response 	= session.get(url, headers=agentHeader, proxies=proxy)	
 	
-		if response.status_code == 200:
-			print ("Downloading file ...")
-			with open(local_filename,"wb") as outputfile:
-				for chunk in response.iter_content():
-					outputfile.write(chunk)
-			print ("Downloading completed \n")
+				if response.status_code == 200:
+					print ("Downloading file : "+local_filename)
+					with open(category+os.sep+local_filename,"wb") as outputfile:
+						for chunk in response.iter_content():
+							outputfile.write(chunk)
+					print ("Downloading completed : "+local_filename+"\n")
+				else :
+					writeError(url,"Response : "+str(response.status_code))
+			else :
+				writeError(url,"Can't downloaded because of big size.")
 		else :
-			print ("Url : "+url)
-			print ("Response : "+str(response.status_code))
-			with open('log.txt',"a+") as logfile:
-				logfile.write(str(response.status_code)+" "+url)
-	else :
-		print ("Can't downloaded because of size big ")
-		with open('log.txt',"a+") as logfile:
-			logfile.write("\n Can't downloaded because of size big "+"\n"+size+" "+url)
+			# Rename and download closed
+			'''
+			suffix = "_"+str(random.randrange(0, 100000000))
+			filename, file_extension = os.path.splitext(local_filename)
+			local_filename = filename+suffix+file_extension 
+			'''
+			writeError(url,"There is file with same name.")
+
+	except Exception as err:
+		writeError(url,"Can't downloaded because of big size."+str(err))		
 	
 def isDuplicateLink(url):
 
@@ -162,7 +173,12 @@ def isDuplicateLink(url):
 		file.write(url+"\n")
 		return False
 
-		
+
+def writeError(url, error):
+	with open('log.txt', "a+") as logfile:				
+		print (error)
+		logfile.write(url+"\n"+error)
+	
 if __name__ == '__main__':
 	# Proxy 
 	proxy = {
@@ -176,6 +192,11 @@ if __name__ == '__main__':
 	proxy['host'] 	= "5.196.218.190" # Örnek proxy sunuxu adresi
 	user_agent  	= UserAgent()
 	agentHeader 	= {'User-Agent': user_agent.random}
- 
-	run(".exe",agentHeader, proxy)
+
+	cateqories	= ["security", "browsers", "biz-soft", "chat-voip-email", "desktop-enhancements", "developers", 				"digitalphoto", "drivers", "education", "entertainment", "games", "design", "home", "internet", "ios", 				"audio", "networking", "productivity", "customization", "travel", "video", "utilities"] 
+
+	for category in cateqories :
+		run(category, agentHeader, proxy)
+
+
 
