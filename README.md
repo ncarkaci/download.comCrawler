@@ -7,6 +7,10 @@
 
 ##### The default search categories got from download.com web site; they are web site official software categories. You can use these software categories or you can create own search keyword list, forexample; ['exe','dll','com']
 
-##### In script, other software resources without download.com are eliminated because their has each of them has own html tag structure. Our code don't support this. If you want to try dowload software 3part source you can do this with minumum changing within source code.
+##### In script, other software resources without download.com are eliminated because each of them has own html tag structure. Our code don't support some of them. And this situation can be problem sometimes. If you want to try dowload software 3part source you can do this with minumum changing within source code.
 
-##### The code desing for multiple categories and software search and download. Script search and download softwares into category directory.
+##### The code is designed search and download for multiple categories and software. Accordingly, the script search and download softwares into directory which named as category title.
+
+#### Script has log.txt file. All of problem and error write into. On the other hand, visited links are collected into links.txt because of check duplicate file to donwnload again same file.
+
+#### We don't download file which same, hoverwer, this is palliative solution and not good approach. Can be renamed with random string and equivalance is checking with hash value. The code piece are written but not completed. 
