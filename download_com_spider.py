@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 #
-# Search download.com website and downlaod executables
+# Search download.com website and downlaod executables as given searchkeyword
 #
 # Firstly calculate paging, after that scrapy all link in pages
 # Eliminate other OS and platform applications without windows
+# Make download proces with multithread approach
 #
 # Author: Necmettin Çarkacı
 # E-mail: necmettin [ . ] carkaci [ @ ] gmail [ . ] com
@@ -22,26 +23,28 @@ except:
 	print ("Missing libary. Try below command installing library. \n pip install fake-useragent")
 
 
-def run(search_keyword, agentHeader, proxy):
+def run(searchKeywordList, agentHeader, proxy):
+
+	for search_keyword in searchKeywordList :
 	
-	main_url =  "http://download.cnet.com/s/"+search_keyword+"/windows/"	
+		main_url =  "http://download.cnet.com/s/"+search_keyword+"/windows/"	
 
-	content= requests.get(main_url, headers = agentHeader,  proxies=proxy).text
+		content= requests.get(main_url, headers = agentHeader,  proxies=proxy).text
 
-	pattern = re.compile(r'<span\sclass=\"results-total\">\s(.*?)\s</span>')
-	match 	= pattern.search(content).group()
+		pattern = re.compile(r'<span\sclass=\"results-total\">\s(.*?)\s</span>')
+		match 	= pattern.search(content).group()
 
-	number_of_file 	= 	int(match.split()[3].replace(",",""))
-	pageSize 		=	int(number_of_file/10) # Show 10 file in per page
-    
-	print ("For "+search_keyword+" "+str(number_of_file)+" file found on "+main_url)
+		number_of_file 	= 	int(match.split()[3].replace(",",""))
+		pageSize 		=	int(number_of_file/10) # Show 10 file in per page
+	    
+		print ("For "+search_keyword+" "+str(number_of_file)+" file found on "+main_url)
 
-	for pageNo in range(1,pageSize):
-		page_url = main_url+"?page="+str(pageNo)
+		for pageNo in range(1,pageSize):
+			page_url = main_url+"?page="+str(pageNo)
 		
-		if not os.path.exists(search_keyword):
-			os.makedirs(search_keyword)
-		downloadFilesInPage(page_url, search_keyword, agentHeader, proxy)
+			if not os.path.exists(search_keyword):
+				os.makedirs(search_keyword)
+			downloadFilesInPage(page_url, search_keyword, agentHeader, proxy)
 
 
 # Getting redirect links from page
@@ -99,6 +102,7 @@ def getDownloadLink(url,  agentHeader, proxy):
 		match = re.findall(r'(data-dl-url=(?s)(.*)data-product-id=)', content)
 
 		if match:
+			download_link = ''
 			for text in match:
 
 				download_link = str(text[1])
@@ -133,8 +137,6 @@ def downloadFile(url, category, agentHeader, proxy):
 			session 	= requests.session()
 			size 		= requests.head(url).headers['Content-Length']
 			#print ("File size : "+size)	
-
-			length_limit	= 10485760 # 10485760 Byte = 10 Megabyte warn! make this dynamic parameter
 
 			if (int(size) < length_limit):
 				response 	= session.get(url, headers=agentHeader, proxies=proxy)	
@@ -189,14 +191,15 @@ if __name__ == '__main__':
 		}
 	
 	# Set variables
-	proxy['host'] 	= "5.196.218.190" # Örnek proxy sunuxu adresi
+	proxy['host'] 	= "5.196.218.190" # Sample proxy sunuxu address
 	user_agent  	= UserAgent()
 	agentHeader 	= {'User-Agent': user_agent.random}
 
-	cateqories	= ["security", "browsers", "biz-soft", "chat-voip-email", "desktop-enhancements", "developers", 				"digitalphoto", "drivers", "education", "entertainment", "games", "design", "home", "internet", "ios", 				"audio", "networking", "productivity", "customization", "travel", "video", "utilities"] 
+	searchKeywordList = ["security", "browsers", "biz-soft", "chat-voip-email", "desktop-enhancements", "developers", 				"digitalphoto", "drivers", "education", "entertainment", "games", "design", "home", "internet", "ios", 				"audio", "networking", "productivity", "customization", "travel", "video", "utilities"] 
 
-	for category in cateqories :
-		run(category, agentHeader, proxy)
+	length_limit	= 10485760 # 10485760 Byte = 10 Megabyte upper limit for download. Don't download big file from 10 Mb.
+
+	run(searchKeywordList, agentHeader, proxy)
 
 
 

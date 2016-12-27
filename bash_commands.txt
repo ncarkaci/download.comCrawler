@@ -1,0 +1,6 @@
+mkdir exe zip
+
+mv -t exe/ *.{exe,EXE,Exe,dll,msi,MSI,Msi} 
+
+mv -t zip/ *.{zip,Zip,ZIP,rar,7z}
+
