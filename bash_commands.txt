@@ -1,3 +1,8 @@
+#!/bin/bash -
+#===============================================================================
+# Create exe and zip directory. And move executables files into exe directory, and, archive files into zip directory
+#===============================================================================
+
 mkdir exe zip
 
 mv -t exe/ *.{exe,EXE,Exe,dll,msi,MSI,Msi} 
